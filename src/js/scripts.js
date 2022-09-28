@@ -1,53 +1,46 @@
-import * as THREE from 'three'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
+const canvas = document.querySelector('#threebike');
+const renderer = new THREE.WebGLRenderer({
+    canvas,
+    alpha: true,
+});
+renderer.setPixelRatio(window.devicePixelRatio);
 
-import adam from '../img/adam_and_eve_before_the_fall.glb'
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
 
-const scene = new THREE.Scene()
-scene.add(new THREE.AxesHelper(5))
-
-const light = new THREE.SpotLight()
-light.position.set(5, 5, 5)
-scene.add(light)
-
-const camera = new THREE.PerspectiveCamera(
-    75,
-    window.innerWidth / window.innerHeight,
-    0.1,
-    1000
-)
-camera.position.z = 2
-
-const renderer = new THREE.WebGLRenderer()
-// renderer.physicallyCorrectLights = true
-// renderer.shadowMap.enabled = true
-// renderer.outputEncoding = THREE.sRGBEncoding
-renderer.setClearColor(0xffffff, 0);
-renderer.setSize(window.innerWidth, window.innerHeight)
-document.body.appendChild(renderer.domElement)
-
-const controls = new OrbitControls(camera, renderer.domElement)
+const controls = new THREE.OrbitControls(camera, renderer.domElement)
 controls.enableDamping = true
 
-const loader = new GLTFLoader()
+const scene = new THREE.Scene()
+// scene.add(new THREE.AxesHelper(5))
+
+const ambient = new THREE.AmbientLight(0x111111);
+
+// Lights
+const spotLight1 = createSpotlight(0xFF7F00);
+const spotLight2 = createSpotlight(0x00FF7F);
+const spotLight3 = createSpotlight(0x7F00FF);
+const spotLight4 = createSpotlight(0x7F00FF);
+let lightHelper1, lightHelper2, lightHelper3, lightHelper4;
+
+// LOADING PAGE
+const loadingManager = new THREE.LoadingManager();
+const progressBarContainer = document.querySelector('.progress-bar-container');
+loadingManager.onLoad = function () {
+    progressBarContainer.style.display = 'none';
+}
+
+// raycaster
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+import bike from '../media/road_bike.glb';
+// Load the bike
+const loader = new THREE.GLTFLoader(loadingManager)
 loader.load(
-    adam,
+    bike,
     function (gltf) {
-        // gltf.scene.traverse(function (child) {
-        //     if ((child as THREE.Mesh).isMesh) {
-        //         const m = (child as THREE.Mesh)
-        //         m.receiveShadow = true
-        //         m.castShadow = true
-        //     }
-        //     if (((child as THREE.Light)).isLight) {
-        //         const l = (child as THREE.Light)
-        //         l.castShadow = true
-        //         l.shadow.bias = -.003
-        //         l.shadow.mapSize.width = 2048
-        //         l.shadow.mapSize.height = 2048
-        //     }
-        // })
+        gltf.scene.scale.set(0.8, 0.8, 0.8);
+        gltf.scene.position.y = -0.8;
         scene.add(gltf.scene)
     },
     (xhr) => {
@@ -58,7 +51,17 @@ loader.load(
     }
 )
 
-window.addEventListener('resize', onWindowResize, false)
+function createSpotlight(color) {
+    const newObj = new THREE.SpotLight(color, 2);
+    newObj.castShadow = true;
+    newObj.angle = 0.3;
+    newObj.penumbra = 0.2;
+    newObj.decay = 2;
+    newObj.distance = 50;
+    return newObj;
+}
+
+// Resize event listener
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight
     camera.updateProjectionMatrix()
@@ -66,18 +69,82 @@ function onWindowResize() {
     render()
 }
 
-
+// Animate function
 function animate() {
     requestAnimationFrame(animate)
-
     controls.update()
-
     render()
-
 }
 
 function render() {
     renderer.render(scene, camera)
 }
 
-animate()
+function transpAllExceptThisObj(obj) {
+    scene.traverse(function (child) {
+        if (child instanceof THREE.Mesh) {
+            if (child === obj) {
+                child.material.transparent = false;
+                console.log(child);
+
+                renderer.setAnimationLoop(function () {
+                    if (child.position.z < 10) {
+                        child.position.z += 0.1;
+                    }
+                    child.rotation.y += 0.05;
+                    render();
+                    // console.log(child.rotation.y);
+                });
+
+            } else {
+                child.material.transparent = true;
+                child.material.opacity = 0.05;
+            }
+        }
+    });
+}
+
+function onClick() {
+    event.preventDefault();
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    var intersects = raycaster.intersectObject(scene, true);
+    if (intersects.length > 0) {
+        var obj = intersects[0].object;
+        transpAllExceptThisObj(obj);
+    }
+    render();
+}
+
+
+// Init renderer, camera, controls, scene
+function init_all() {
+    renderer.setClearColor(0xffffff, 0);
+    renderer.setSize(window.innerWidth, window.innerHeight)
+    document.body.appendChild(renderer.domElement)
+
+    camera.position.z = 2;
+
+    spotLight1.position.set(1, 4, 4);
+    spotLight2.position.set(0, 4, 3);
+    spotLight3.position.set(-1, 4, 4);
+    spotLight4.position.set(0, 4, -4);
+
+    lightHelper1 = new THREE.SpotLightHelper(spotLight1);
+    lightHelper2 = new THREE.SpotLightHelper(spotLight2);
+    lightHelper3 = new THREE.SpotLightHelper(spotLight3);
+    lightHelper4 = new THREE.SpotLightHelper(spotLight4);
+
+    scene.add(ambient);
+    scene.add(spotLight1, spotLight2, spotLight3, spotLight4);
+    // scene.add(lightHelper1, lightHelper2, lightHelper3, lightHelper4);
+
+    window.addEventListener('resize', onWindowResize, false)
+    renderer.domElement.addEventListener('click', onClick, false);
+}
+
+
+init_all();
+animate();
