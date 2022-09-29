@@ -1,5 +1,5 @@
 const canvas = document.querySelector('#threebike');
-const renderer = new THREE.WebGLRenderer({
+var renderer = new THREE.WebGLRenderer({
     canvas,
     alpha: true,
 });
@@ -80,25 +80,38 @@ function render() {
     renderer.render(scene, camera)
 }
 
+
 function transpAllExceptThisObj(obj) {
     scene.traverse(function (child) {
         if (child instanceof THREE.Mesh) {
             if (child === obj) {
                 child.material.transparent = false;
+                child.material.opacity = 1;
                 console.log(child);
-
+                let TURN = false;
+                var a = { x: child.position.x, y: child.position.y, z: child.position.z };
                 renderer.setAnimationLoop(function () {
-                    if (child.position.z < 10) {
-                        child.position.z += 0.1;
+                    if (!TURN) {
+                        var newX = lerp(a.x, zoomIn.x, ease(t));
+                        var newY = lerp(a.y, zoomIn.y, ease(t));
+                        var newZ = lerp(a.z, zoomIn.z, ease(t));
+                        child.position.set(newX, newY, newZ);
+                        t += dt;
+                        // console.log(b);
+                        console.log(child.position);
+                        if (newZ >= zoomIn.z) {
+                            TURN = true;
+                            // renderer.setAnimationLoop(null);
+                        }
+                        render();
+                    } else {
+                        child.rotateOnAxis(new THREE.Vector3(0, 1, 0), 0.03);
                     }
-                    child.rotation.y += 0.05;
-                    render();
-                    // console.log(child.rotation.y);
                 });
-
             } else {
                 child.material.transparent = true;
                 child.material.opacity = 0.05;
+                render();
             }
         }
     });
@@ -112,8 +125,8 @@ function onClick() {
     raycaster.setFromCamera(mouse, camera);
     var intersects = raycaster.intersectObject(scene, true);
     if (intersects.length > 0) {
-        var obj = intersects[0].object;
-        transpAllExceptThisObj(obj);
+        // var obj = intersects[0].object;
+        transpAllExceptThisObj(intersects[0].object);
     }
     render();
 }
