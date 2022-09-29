@@ -29,6 +29,11 @@ loadingManager.onLoad = function () {
     progressBarContainer.style.display = 'none';
 }
 
+// Button for stop
+const stopButton = document.querySelector('.stopButton');
+stopButton.style.display = 'none';
+
+
 // raycaster
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
@@ -85,20 +90,18 @@ function transpAllExceptThisObj(obj) {
     scene.traverse(function (child) {
         if (child instanceof THREE.Mesh) {
             if (child === obj) {
+                stopButton.style.display = 'block';
                 child.material.transparent = false;
                 child.material.opacity = 1;
-                console.log(child);
                 let TURN = false;
                 var a = { x: child.position.x, y: child.position.y, z: child.position.z };
                 renderer.setAnimationLoop(function () {
                     if (!TURN) {
-                        var newX = lerp(a.x, zoomIn.x, ease(t));
-                        var newY = lerp(a.y, zoomIn.y, ease(t));
-                        var newZ = lerp(a.z, zoomIn.z, ease(t));
+                        var newX = lerp(a.x, zoomIn.x, t);
+                        var newY = lerp(a.y, zoomIn.y, t);
+                        var newZ = lerp(a.z, zoomIn.z, t);
                         child.position.set(newX, newY, newZ);
                         t += dt;
-                        // console.log(b);
-                        console.log(child.position);
                         if (newZ >= zoomIn.z) {
                             TURN = true;
                             // renderer.setAnimationLoop(null);
@@ -116,6 +119,30 @@ function transpAllExceptThisObj(obj) {
         }
     });
 }
+
+function comeBack() {
+    scene.traverse(function (child) {
+        if (child instanceof THREE.Mesh) {
+            if (child.rotation.x != 0) {
+                child.rotateOnAxis(new THREE.Vector3(0, 0, 0), 0);
+                var a = { x: child.position.x, y: child.position.y, z: child.position.z };
+                renderer.setAnimationLoop(function () {
+                    var newX = lerp(a.x, zoom0.x, t);
+                    var newY = lerp(a.y, zoom0.y, t);
+                    var newZ = lerp(a.z, zoom0.z, t);
+                    child.position.set(newX, newY, newZ);
+                    console.log(child.position);
+                    t += dt;
+                    if (newZ <= 0) {
+                        renderer.setAnimationLoop(null);
+                    }
+                    render();
+                });
+            }
+        }
+    });
+}
+
 
 function onClick() {
     event.preventDefault();
@@ -156,6 +183,7 @@ function init_all() {
 
     window.addEventListener('resize', onWindowResize, false)
     renderer.domElement.addEventListener('click', onClick, false);
+    document.getElementById("PAW").addEventListener("click", comeBack, false);
 }
 
 
