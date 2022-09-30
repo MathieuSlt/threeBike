@@ -39,7 +39,7 @@ stopButton.style.display = 'none';
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-import bike from '../media/clean_bike.glb';
+import bike from '../media/test.glb';
 // Load the bike
 const loader = new THREE.GLTFLoader(loadingManager)
 loader.load(
@@ -87,14 +87,17 @@ function render() {
 }
 
 function transpAllExceptThisObj(obj) {
+
+    renderer.domElement.removeEventListener("click", comeBack, false);
     stopButton.style.display = 'block';
     scene.traverse(function (child) {
         if (child instanceof THREE.Mesh) {
-            if (child === obj) {
-                child.material.transparent = false;
-                child.material.opacity = 1;
+            if (child.name == obj.name) {
                 let TURN = false;
+                console.log(child);
                 renderer.setAnimationLoop(function () {
+                    child.material.transparent = false;
+                    child.material.opacity = 1;
                     var a = { x: child.position.x, y: child.position.y, z: child.position.z };
                     if (!TURN) {
                         var newX = lerp(a.x, zoomIn.x, t);
@@ -105,12 +108,12 @@ function transpAllExceptThisObj(obj) {
                         if (newZ >= zoomIn.z) {
                             TURN = true;
                         }
-                        render();
+                        // render();
                     } else {
-                        // renderer.domElement.removeEventListener("click", comeBack, false);
+                        // console.log(child.name);
                         child.rotateOnAxis(new THREE.Vector3(0, 1, 0), rotateSpeed);
                         t = 0;
-                        // render();
+                        render();
                     }
                 });
             } else {
@@ -135,6 +138,7 @@ function removeTransparency() {
 
 
 function comeBack() {
+    renderer.domElement.addEventListener('click', onClick, false);
     scene.traverse(function (child) {
         if (child instanceof THREE.Mesh) {
             if (child.rotation.y != 0) {
@@ -148,19 +152,20 @@ function comeBack() {
                     t += dt;
                     if (newZ <= 0) {
                         child.position.set(0, 0, 0);
-                        console.log(child.rotation);
+                        // console.log(child.rotation);
                         if (Math.abs(child.rotation.x).toFixed(1) == "0.0" && Math.abs(child.rotation.y).toFixed(1) == "0.0") {
                             child.rotateOnAxis(new THREE.Vector3(0, 0, 0), 0);
                             removeTransparency();
                             renderer.setAnimationLoop(null);
                             t = 0;
+                            // init_all();
                         }
                     }
                 });
             }
         }
     });
-    // renderer.domElement.addEventListener('click', onClick, false);
+
 }
 
 
@@ -207,6 +212,14 @@ function init_all() {
     document.getElementById("PAW").addEventListener("click", comeBack, false);
 }
 
+function logTransparency() {
+    scene.traverse(function (child) {
+        if (child instanceof THREE.Mesh) {
+            console.log(child.name);
+            console.log(child.material.transparent);
+        }
+    });
+}
 
 init_all();
 animate();
