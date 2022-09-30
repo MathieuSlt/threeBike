@@ -20,6 +20,7 @@ const spotLight1 = createSpotlight(0xFF7F00);
 const spotLight2 = createSpotlight(0x00FF7F);
 const spotLight3 = createSpotlight(0x7F00FF);
 const spotLight4 = createSpotlight(0x7F00FF);
+const spotLight5 = createSpotlight(0xFFFFFF);
 let lightHelper1, lightHelper2, lightHelper3, lightHelper4;
 
 // LOADING PAGE
@@ -38,7 +39,7 @@ stopButton.style.display = 'none';
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-import bike from '../media/road_bike.glb';
+import bike from '../media/clean_bike.glb';
 // Load the bike
 const loader = new THREE.GLTFLoader(loadingManager)
 loader.load(
@@ -46,13 +47,13 @@ loader.load(
     function (gltf) {
         gltf.scene.scale.set(0.8, 0.8, 0.8);
         gltf.scene.position.y = -0.8;
-        scene.add(gltf.scene)
+        scene.add(gltf.scene);
     },
     (xhr) => {
-        console.log((xhr.loaded / xhr.total) * 100 + '% loaded')
+        console.log('ok');
     },
     (error) => {
-        console.log(error)
+        console.log(error);
     }
 )
 
@@ -77,7 +78,7 @@ function onWindowResize() {
 // Animate function
 function animate() {
     requestAnimationFrame(animate)
-    controls.update()
+    // controls.update()
     render()
 }
 
@@ -85,17 +86,16 @@ function render() {
     renderer.render(scene, camera)
 }
 
-
 function transpAllExceptThisObj(obj) {
+    stopButton.style.display = 'block';
     scene.traverse(function (child) {
         if (child instanceof THREE.Mesh) {
             if (child === obj) {
-                stopButton.style.display = 'block';
                 child.material.transparent = false;
                 child.material.opacity = 1;
                 let TURN = false;
-                var a = { x: child.position.x, y: child.position.y, z: child.position.z };
                 renderer.setAnimationLoop(function () {
+                    var a = { x: child.position.x, y: child.position.y, z: child.position.z };
                     if (!TURN) {
                         var newX = lerp(a.x, zoomIn.x, t);
                         var newY = lerp(a.y, zoomIn.y, t);
@@ -104,11 +104,13 @@ function transpAllExceptThisObj(obj) {
                         t += dt;
                         if (newZ >= zoomIn.z) {
                             TURN = true;
-                            // renderer.setAnimationLoop(null);
                         }
                         render();
                     } else {
-                        child.rotateOnAxis(new THREE.Vector3(0, 1, 0), 0.03);
+                        // renderer.domElement.removeEventListener("click", comeBack, false);
+                        child.rotateOnAxis(new THREE.Vector3(0, 1, 0), rotateSpeed);
+                        t = 0;
+                        // render();
                     }
                 });
             } else {
@@ -120,27 +122,45 @@ function transpAllExceptThisObj(obj) {
     });
 }
 
+function removeTransparency() {
+    scene.traverse(function (child) {
+        if (child instanceof THREE.Mesh) {
+            child.material.transparent = false;
+            child.material.opacity = 1;
+            render();
+        }
+    });
+    stopButton.style.display = 'none';
+}
+
+
 function comeBack() {
     scene.traverse(function (child) {
         if (child instanceof THREE.Mesh) {
-            if (child.rotation.x != 0) {
-                child.rotateOnAxis(new THREE.Vector3(0, 0, 0), 0);
-                var a = { x: child.position.x, y: child.position.y, z: child.position.z };
+            if (child.rotation.y != 0) {
                 renderer.setAnimationLoop(function () {
+                    child.rotateOnAxis(new THREE.Vector3(0, 1, 0), rotateSpeed * 2);
+                    var a = { x: child.position.x, y: child.position.y, z: child.position.z };
                     var newX = lerp(a.x, zoom0.x, t);
                     var newY = lerp(a.y, zoom0.y, t);
                     var newZ = lerp(a.z, zoom0.z, t);
                     child.position.set(newX, newY, newZ);
-                    console.log(child.position);
                     t += dt;
                     if (newZ <= 0) {
-                        renderer.setAnimationLoop(null);
+                        child.position.set(0, 0, 0);
+                        console.log(child.rotation);
+                        if (Math.abs(child.rotation.x).toFixed(1) == "0.0" && Math.abs(child.rotation.y).toFixed(1) == "0.0") {
+                            child.rotateOnAxis(new THREE.Vector3(0, 0, 0), 0);
+                            removeTransparency();
+                            renderer.setAnimationLoop(null);
+                            t = 0;
+                        }
                     }
-                    render();
                 });
             }
         }
     });
+    // renderer.domElement.addEventListener('click', onClick, false);
 }
 
 
@@ -152,7 +172,6 @@ function onClick() {
     raycaster.setFromCamera(mouse, camera);
     var intersects = raycaster.intersectObject(scene, true);
     if (intersects.length > 0) {
-        // var obj = intersects[0].object;
         transpAllExceptThisObj(intersects[0].object);
     }
     render();
@@ -171,15 +190,17 @@ function init_all() {
     spotLight2.position.set(0, 4, 3);
     spotLight3.position.set(-1, 4, 4);
     spotLight4.position.set(0, 4, -4);
+    spotLight5.position.set(0, 0, 30);
 
     lightHelper1 = new THREE.SpotLightHelper(spotLight1);
     lightHelper2 = new THREE.SpotLightHelper(spotLight2);
     lightHelper3 = new THREE.SpotLightHelper(spotLight3);
     lightHelper4 = new THREE.SpotLightHelper(spotLight4);
+    lightHelper5 = new THREE.SpotLightHelper(spotLight5);
 
     scene.add(ambient);
-    scene.add(spotLight1, spotLight2, spotLight3, spotLight4);
-    // scene.add(lightHelper1, lightHelper2, lightHelper3, lightHelper4);
+    scene.add(spotLight1, spotLight2, spotLight3, spotLight4, spotLight5);
+    // scene.add(lightHelper1, lightHelper2, lightHelper3, lightHelper4, lightHelper5);
 
     window.addEventListener('resize', onWindowResize, false)
     renderer.domElement.addEventListener('click', onClick, false);
