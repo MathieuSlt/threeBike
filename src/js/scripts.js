@@ -39,7 +39,7 @@ stopButton.style.display = 'none';
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-import bike from '../media/test.glb';
+import bike from '../media/road_bike.glb';
 // Load the bike
 const loader = new THREE.GLTFLoader(loadingManager)
 loader.load(
